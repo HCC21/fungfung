@@ -102,6 +102,7 @@
     <h3>📝 歌詞微調（每句）：</h3>
     <div id="linesOutput"></div>
   </section>
+<button onclick="splitLyricsWithRecordButtons()">📄 拆句並設置對拍按鈕</button>
 
   <script>
     const audio = document.getElementById("audio");
@@ -238,6 +239,30 @@
 
     audio.addEventListener("play", () => lrcPlaying = true);
     audio.addEventListener("pause", () => lrcPlaying = false);
+function splitLyricsWithRecordButtons() {
+  lyrics = textarea.value.trim().split(/[\n\r]+/);
+  linesOutput.innerHTML = "";
+  times = Array(lyrics.length).fill(null); // 初始化時間陣列
+
+  lyrics.forEach((line, idx) => {
+    const container = document.createElement("div");
+    container.className = "line-item";
+    container.style.marginBottom = "8px";
+
+    const btn = document.createElement("button");
+    btn.textContent = "🎯 記錄";
+    btn.onclick = () => {
+      const t = audio.currentTime;
+      times[idx] = t;
+      btn.textContent = `✅ ${formatTime(t)}`;
+    };
+
+    const lyricSpan = document.createElement("span");
+    lyricSpan.textContent = ` ${line}`;
+    container.append(btn, lyricSpan);
+    linesOutput.appendChild(container);
+  });
+}
   </script>
 </body>
 </html>
