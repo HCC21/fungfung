@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>豐豐大俠製作歌詞工具</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  </script>
   <style>
     body {
       font-family: 'Microsoft JhengHei', sans-serif;
@@ -36,15 +35,6 @@
       height: 200px;
       resize: vertical;
     }
-    emoji-picker {
-      flex: 1;
-      min-width: 220px;
-      max-height: 300px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      background: #fff;
-      overflow: auto;
-    }
     button {
       padding: 10px 15px;
       font-size: 16px;
@@ -63,16 +53,12 @@
       max-width: 600px;
       margin: 10px 0;
     }
-#livePreview .highlight {
-  color: red;
-  background: #fff0f0;
-  font-size: 28px;
-  font-weight: bold;
-  padding: 5px 10px;
-  border-radius: 6px;
-
-
-</style>
+    .active-line {
+      background-color: #fff3b0;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+  </style>
 </head>
 <body>
   <h2>豐豐大俠製作歌詞工具</h2>
@@ -84,7 +70,7 @@
 
   <section class="lyrics-container">
     <textarea id="lyricInput" placeholder="每行一句歌詞，可插入 emoji 🎶💕🔥"></textarea>
-    </section>
+  </section>
 
   <section>
     <button onclick="exportLRC()">💾 匯出 .lrc</button>
@@ -95,15 +81,14 @@
     <h3>📝 歌詞分成每句：</h3>
     <div id="linesOutput"></div>
   </section>
-<button onclick="splitLyricsWithRecordButtons()">📄 拆句並設置對拍按鈕</button>
+  <button onclick="splitLyricsWithRecordButtons()">📄 拆句並設置對拍按鈕</button>
 
   <script>
     const audio = document.getElementById("audio");
     const textarea = document.getElementById("lyricInput");
-      const linesOutput = document.getElementById("linesOutput");
-    const livePreview = document.getElementById("livePreview");
+    const linesOutput = document.getElementById("linesOutput");
 
-    let lyrics = [], times = [], currentLine = 0, lrcPlaying = false;
+    let lyrics = [], times = [];
 
     document.getElementById("audioFile").addEventListener("change", e => {
       const file = e.target.files[0];
@@ -113,15 +98,6 @@
       audio.load();
     });
 
-    function tapRecord() {
-      if (lyrics.length === 0) lyrics = textarea.value.trim().split("\n");
-      if (currentLine >= lyrics.length) return alert("✅ 所有歌詞已對拍！");
-      const t = audio.currentTime;
-      times.push(t);
-      renderLine(currentLine, formatTime(t), lyrics[currentLine]);
-      currentLine++;
-    }
-
     function formatTime(t) {
       const min = String(Math.floor(t / 60)).padStart(2, "0");
       const sec = Math.floor(t % 60);
@@ -129,46 +105,8 @@
       return `${min}:${String(sec).padStart(2, "0")}.${String(hundredths).padStart(2, "0")}`;
     }
 
-    function renderLine(index, timeStr, text) {
-      const box = document.createElement("div");
-      box.className = "line-item";
-      box.id = `line-${index}`;
-
-      const minus = document.createElement("button");
-      minus.textContent = "−";
-      minus.onclick = () => {
-        times[index] = Math.max(0, times[index] - 0.1);
-        timeInput.value = formatTime(times[index]);
-      };
-
-      const plus = document.createElement("button");
-      plus.textContent = "+";
-      plus.onclick = () => {
-        times[index] = times[index] + 0.1;
-        timeInput.value = formatTime(times[index]);
-      };
-
-      const timeInput = document.createElement("input");
-      timeInput.type = "text";
-      timeInput.value = timeStr;
-      timeInput.addEventListener("change", () => {
-        const [min, sec, h] = timeInput.value.split(/[:.]/).map(Number);
-        times[index] = (min * 60) + sec + (h || 0) / 100;
-      });
-
-      const lyricSpan = document.createElement("span");
-      lyricSpan.textContent = text;
-
-      box.append(minus, plus, timeInput, lyricSpan);
-      linesOutput.appendChild(box);
-    }
-
     function exportLRC() {
-      const ar = "";
-      const ti = "";
-      const by = "";
-      const al = "";
-
+      const ar = "", ti = "", by = "", al = "";
       lyrics = textarea.value.trim().split("\n");
 
       let output = "";
@@ -190,16 +128,12 @@
       a.click();
     }
 
-
     function exportTXT() {
       lyrics = textarea.value.trim().split("\n");
       let output = "";
-
       for (let i = 0; i < lyrics.length && i < times.length; i++) {
         const start = Math.round(times[i] * 1000);
-        const end = times[i + 1]
-          ? Math.round((times[i + 1] - times[i]) * 1000)
-          : 3000;
+        const end = times[i + 1] ? Math.round((times[i + 1] - times[i]) * 1000) : 3000;
         output += `[${start},${end}]<0,${end},0>${lyrics[i]}\n`;
       }
 
@@ -210,73 +144,78 @@
       a.click();
     }
 
+    function splitLyricsWithRecordButtons() {
+      lyrics = textarea.value.trim().split(/[\n\r]+/);
+      linesOutput.innerHTML = "";
+      times = Array(lyrics.length).fill(null);
+
+      lyrics.forEach((line, idx) => {
+        const container = document.createElement("div");
+        container.className = "line-item";
+        container.style.marginBottom = "8px";
+
+        const btn = document.createElement("button");
+        btn.textContent = "🎯 記錄";
+        btn.onclick = () => {
+          const t = audio.currentTime;
+          times[idx] = t;
+          timeInput.value = formatTime(t);
+          btn.textContent = `✅ ${formatTime(t)}`;
+        };
+
+        const minus = document.createElement("button");
+        minus.textContent = "−";
+        minus.onclick = () => {
+          if (times[idx] !== null) {
+            times[idx] = Math.max(0, times[idx] - 0.1);
+            timeInput.value = formatTime(times[idx]);
+          }
+        };
+
+        const plus = document.createElement("button");
+        plus.textContent = "+";
+        plus.onclick = () => {
+          if (times[idx] !== null) {
+            times[idx] += 0.1;
+            timeInput.value = formatTime(times[idx]);
+          }
+        };
+
+        const timeInput = document.createElement("input");
+        timeInput.type = "text";
+        timeInput.placeholder = "00:00.00";
+        timeInput.size = 7;
+        timeInput.addEventListener("change", () => {
+          const [min, sec, hs] = timeInput.value.split(/[:.]/).map(Number);
+          times[idx] = min * 60 + sec + (hs || 0) / 100;
+        });
+
+        const span = document.createElement("span");
+        span.textContent = " " + line;
+
+        container.append(btn, minus, plus, timeInput, span);
+        linesOutput.appendChild(container);
+      });
+    }
+
+    // 🎯 播放時自動高亮當前行
     audio.addEventListener("timeupdate", () => {
-      if (!lrcPlaying || !times.length) return;
       const current = audio.currentTime;
+      let activeIdx = -1;
+
       for (let i = 0; i < times.length; i++) {
-        if (i === times.length - 1 || (current >= times[i] && current < times[i + 1])) {
-          livePreview.innerHTML = `<span class="highlight">${lyrics[i]}</span>`;
-          break;
+        if (times[i] !== null && current >= times[i]) {
+          activeIdx = i;
         }
       }
+
+      document.querySelectorAll(".line-item").forEach((line, idx) => {
+        line.classList.toggle("active-line", idx === activeIdx);
+        if (idx === activeIdx) {
+          line.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
     });
-
-    audio.addEventListener("play", () => lrcPlaying = true);
-    audio.addEventListener("pause", () => lrcPlaying = false);
-function splitLyricsWithRecordButtons() {
-  lyrics = textarea.value.trim().split(/[\n\r]+/);
-  linesOutput.innerHTML = "";
-  times = Array(lyrics.length).fill(null);
-
-  lyrics.forEach((line, idx) => {
-    const container = document.createElement("div");
-    container.className = "line-item";
-    container.style.marginBottom = "8px";
-
-    const btn = document.createElement("button");
-    btn.textContent = "🎯 記錄";
-    btn.onclick = () => {
-      const t = audio.currentTime;
-      times[idx] = t;
-      timeInput.value = formatTime(t);
-      btn.textContent = `✅ ${formatTime(t)}`;
-    };
-
-    const minus = document.createElement("button");
-    minus.textContent = "−";
-    minus.onclick = () => {
-      if (times[idx] !== null) {
-        times[idx] = Math.max(0, times[idx] - 0.1);
-        timeInput.value = formatTime(times[idx]);
-      }
-    };
-
-    const plus = document.createElement("button");
-    plus.textContent = "+";
-    plus.onclick = () => {
-      if (times[idx] !== null) {
-        times[idx] += 0.1;
-        timeInput.value = formatTime(times[idx]);
-      }
-    };
-
-    const timeInput = document.createElement("input");
-    timeInput.type = "text";
-    timeInput.placeholder = "00:00.00";
-    timeInput.size = 7;
-    timeInput.addEventListener("change", () => {
-      const [min, sec, hs] = timeInput.value.split(/[:.]/).map(Number);
-      times[idx] = min * 60 + sec + (hs || 0) / 100;
-    });
-
-    const span = document.createElement("span");
-    span.textContent = " " + line;
-
-    container.append(btn, minus, plus, timeInput, span);
-    linesOutput.appendChild(container);
-  });
-}
-
   </script>
 </body>
 </html>
