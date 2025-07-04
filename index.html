@@ -48,11 +48,18 @@
     button:hover {
       background-color: #d3614f;
     }
-    audio {
-      width: 100%;
-      max-width: 600px;
-      margin: 10px 0;
-    }
+audio {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  width: 90%;
+  max-width: 600px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
     .active-line {
       background-color: #fff3b0;
       font-weight: bold;
@@ -78,8 +85,7 @@
   </section>
 
   <section>
-    <h3>📝 歌詞分成每句：</h3>
-    <div id="linesOutput"></div>
+     <div id="linesOutput"></div>
   </section>
   <button onclick="splitLyricsWithRecordButtons()">📄 拆句並設置對拍按鈕</button>
 
