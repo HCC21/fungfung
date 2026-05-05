@@ -137,6 +137,10 @@ audio {
     function exportTXT() {
       lyrics = textarea.value.trim().split("\n");
       let output = "";
+
+      // ⭐ 第一行留空
+      output += "\n";
+
       for (let i = 0; i < lyrics.length && i < times.length; i++) {
         const start = Math.round(times[i] * 1000);
         const end = times[i + 1] ? Math.round((times[i + 1] - times[i]) * 1000) : 3000;
@@ -204,7 +208,6 @@ audio {
       });
     }
 
-    // 🎯 播放時自動高亮當前行
     audio.addEventListener("timeupdate", () => {
       const current = audio.currentTime;
       let activeIdx = -1;
