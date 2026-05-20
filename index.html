@@ -48,18 +48,17 @@
     button:hover {
       background-color: #d3614f;
     }
-audio {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 999;
-  width: 90%;
-  max-width: 600px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-
+    audio {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+      width: 90%;
+      max-width: 600px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
     .active-line {
       background-color: #fff3b0;
       font-weight: bold;
@@ -80,6 +79,7 @@ audio {
   </section>
 
   <section>
+    <button onclick="insertTemplate()">✨ 插入標準模版</button>
     <button onclick="exportLRC()">💾 匯出 .lrc</button>
     <button onclick="exportTXT()">🎤 匯出歡歌格式</button>
   </section>
@@ -87,6 +87,7 @@ audio {
   <section>
      <div id="linesOutput"></div>
   </section>
+
   <button onclick="splitLyricsWithRecordButtons()">📄 拆句並設置對拍按鈕</button>
 
   <script>
@@ -134,11 +135,11 @@ audio {
       a.click();
     }
 
+    /* ⭐ 匯出歡歌格式：檔名固定為 95757（無副檔名） */
     function exportTXT() {
       lyrics = textarea.value.trim().split("\n");
       let output = "";
 
-      // ⭐ 第一行留空
       output += "\n";
 
       for (let i = 0; i < lyrics.length && i < times.length; i++) {
@@ -150,7 +151,10 @@ audio {
       const blob = new Blob(["\uFEFF" + output], { type: "text/plain;charset=utf-8" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "歡歌格式.txt";
+
+      /* ⭐ 固定檔名為 95757（無副檔名） */
+      a.download = "95757";
+
       a.click();
     }
 
@@ -225,6 +229,28 @@ audio {
         }
       });
     });
+
+    /* ⭐ 插入標準模版（需密碼 790614） */
+    function insertTemplate() {
+      const pwd = prompt("請輸入密碼以插入標準模版：");
+
+      if (pwd !== "790614") {
+        alert("密碼錯誤，無法插入模版！");
+        return;
+      }
+
+      const template = 
+`༄༅༘ꕥ 豐豐大俠 ꕥ༘༅༄
+原唱：
+3️⃣
+2️⃣
+1️⃣
+
+༄༅༘ꕥ 完ꕥ༘༅༄`;
+
+      textarea.value = template + "\n\n" + textarea.value;
+      alert("模版已成功插入！");
+    }
   </script>
 </body>
 </html>
