@@ -10,18 +10,35 @@
       background: url("background.jpg") no-repeat center center fixed;
       background-size: cover;
       color: #5c3c27;
-      padding: 20px;
+      padding: 0;
+      margin: 0;
       line-height: 1.5;
     }
 
+    /* ⭐ 音樂 bar 永久固定在螢幕最上方 */
+    audio {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 999999;
+      background: #ffffffee;
+      backdrop-filter: blur(6px);
+      padding: 10px 0;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    }
+
+    /* ⭐ 內容往下推，避免被播放器擋住 */
     .app-container {
+      margin-top: 90px;
       background: rgba(255, 255, 255, 0.78);
       backdrop-filter: blur(8px);
       padding: 20px;
       padding-bottom: 150px;
       border-radius: 12px;
       max-width: 900px;
-      margin: auto;
+      margin-left: auto;
+      margin-right: auto;
       box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     }
 
@@ -69,28 +86,17 @@
       box-shadow: 0 1px 0 #b85a46;
     }
 
-audio {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  z-index: 999999; /* 永遠在最上層 */
-  background: #ffffffee; /* 半透明白底 */
-  backdrop-filter: blur(6px); /* 漂亮的毛玻璃效果 */
-  padding: 10px 0;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.25);
-}
-
     .active-line {
       background-color: #fff3b0;
       font-weight: bold;
       transition: background 0.3s;
-  .app-container {
-  padding-bottom: 120px; /* 避免內容被播放器擋住 */
-}
+    }
   </style>
 </head>
 <body>
+
+<!-- ⭐ 永久固定在最上方的音樂播放器 -->
+<audio id="audio" controls preload="auto"></audio>
 
 <div class="app-container">
 
@@ -102,319 +108,272 @@ audio {
 </div>
 
 <script>
-
 async function importExportOneKey() {
   try {
-    // 1️⃣ 選擇任何副檔名的檔案（最保險寫法：不限制 types）
-    const [handle] = await window.showOpenFilePicker({
-      multiple: false
-    });
-
-    // 2️⃣ 讀取檔案內容
+    const [handle] = await window.showOpenFilePicker({ multiple: false });
     const file = await handle.getFile();
     let text = await file.text();
 
-    // 3️⃣ 嘗試解析 JSON
     let json;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      alert("❌ 檔案不是 JSON 格式，無法讀取 lyric！");
-      return;
-    }
+    try { json = JSON.parse(text); }
+    catch { alert("❌ 檔案不是 JSON 格式"); return; }
 
-    if (!json.lyric) {
-      alert("❌ 檔案缺少 lyric 欄位！");
-      return;
-    }
+    if (!json.lyric) { alert("❌ 缺少 lyric 欄位"); return; }
 
-    // 4️⃣ Base64 → Big5 → 正常中文（關鍵）
     let decoded = atob(json.lyric);
     decoded = decodeURIComponent(escape(decoded));
 
-    // 5️⃣ 覆寫同一個檔案（輸出正常中文歌詞）
     const writable = await handle.createWritable();
     await writable.write(decoded);
     await writable.close();
 
-    alert("✅ 已成功匯出正常中文歌詞！（已覆寫原檔）");
-
-  } catch (err) {
-    console.log(err);
-  }
+    alert("✅ 已成功匯出正常中文歌詞！");
+  } catch (err) { console.log(err); }
 }
-
 </script>
 
-</body>
-</html>
-   
+<section>
+  <label>合唱格式檔案：</label>
+  <input type="file" id="huangeFile" onchange="loadHuanGeFile()" />
+</section>
 
-  <section>
-    <label>合唱格式檔案：</label>
-    <input type="file" id="huangeFile" accept=" " onchange="loadHuanGeFile()" />
-   </section>
-  <section>
-    <label>音樂格式檔案：</label>
-    <input type="file" id="audioFile" accept="audio/*" />
-    <audio id="audio" controls preload="auto"></audio>
-  </section>
+<section>
+  <label>音樂格式檔案：</label>
+  <input type="file" id="audioFile" accept="audio/*" />
+</section>
 
-  <section>
-    <button onclick="insertTemplate()">✨ 插入標準模版</button>
-  </section>
+<section>
+  <button onclick="insertTemplate()">✨ 插入標準模版</button>
+</section>
 
-  <section class="lyrics-container">
-    <textarea id="lyricInput" placeholder="每行一句歌詞，可插入 emoji 🎶💕🔥"></textarea>
-  </section>
+<section class="lyrics-container">
+  <textarea id="lyricInput" placeholder="每行一句歌詞，可插入 emoji 🎶💕🔥"></textarea>
+</section>
 
-  <section>
-    <button onclick="splitLyrics()">📄 拆句並設置對拍按鈕</button>
-    <button onclick="reloadLyrics()">🔄 重新載入歌詞（保留時間）</button>
-  </section>
+<section>
+  <button onclick="splitLyrics()">📄 拆句並設置對拍按鈕</button>
+  <button onclick="reloadLyrics()">🔄 重新載入歌詞（保留時間）</button>
+  <button onclick="exportTXT()">🎤 匯出歡歌格式</button>
+</section>
 
-  <section>
-     <div id="linesOutput"></div>
-  </section>
-
-  <section>
-       <button onclick="exportTXT()">🎤 匯出歡歌格式</button>
-  </section>
+<section>
+  <div id="linesOutput"></div>
+</section>
 
 </div>
 
 <script>
-  const audio = document.getElementById("audio");
-  const textarea = document.getElementById("lyricInput");
-  const linesOutput = document.getElementById("linesOutput");
+const audio = document.getElementById("audio");
+const textarea = document.getElementById("lyricInput");
+const linesOutput = document.getElementById("linesOutput");
 
-  let lyricData = [];
+let lyricData = [];
 
-  /* ⭐ 載入音樂 */
-  document.getElementById("audioFile").addEventListener("change", e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    audio.src = url;
-    audio.load();
+/* ⭐ 載入音樂 */
+document.getElementById("audioFile").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  audio.src = URL.createObjectURL(file);
+  audio.load();
+});
+
+function formatTime(t) {
+  const min = String(Math.floor(t / 60)).padStart(2, "0");
+  const sec = Math.floor(t % 60);
+  const hundredths = Math.floor((t % 1) * 100);
+  return `${min}:${String(sec).padStart(2, "0")}.${String(hundredths).padStart(2, "0")}`;
+}
+
+/* ⭐ 載入歡歌 JSON */
+function loadHuanGeFile() {
+  const file = document.getElementById("huangeFile").files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    let text = e.target.result;
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
+    let json;
+    try { json = JSON.parse(text); }
+    catch { alert("檔案不是 JSON 格式"); return; }
+
+    if (!json.lyric) { alert("缺少 lyric 欄位"); return; }
+
+    let decoded = atob(json.lyric);
+    decoded = decodeURIComponent(escape(decoded));
+
+    const lines = decoded.split(/[\n\r]+/);
+
+    lyricData = lines.map((line, idx) => ({
+      id: Date.now() + idx,
+      text: line,
+      time: null
+    }));
+
+    textarea.value = lines.join("\n");
+    renderLines();
+
+    alert("歡歌合唱格式歌詞已載入！");
+  };
+
+  reader.readAsBinaryString(file);
+}
+
+/* ⭐ 匯出歡歌格式 */
+function exportTXT() {
+  let output = "\n";
+
+  lyricData.forEach((item, i) => {
+    if (item.time !== null) {
+      const start = Math.round(item.time * 1000);
+      const end = lyricData[i + 1]
+        ? Math.round((lyricData[i + 1].time - item.time) * 1000)
+        : 3000;
+
+      output += `[${start},${end}]<0,${end},0>${item.text}\n`;
+    }
   });
 
-  function formatTime(t) {
-    const min = String(Math.floor(t / 60)).padStart(2, "0");
-    const sec = Math.floor(t % 60);
-    const hundredths = Math.floor((t % 1) * 100);
-    return `${min}:${String(sec).padStart(2, "0")}.${String(hundredths).padStart(2, "0")}`;
+  const blob = new Blob(["\uFEFF" + output], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "95757";
+  a.click();
+}
+
+/* ⭐ 拆句 */
+function splitLyrics() {
+  const lines = textarea.value.trim().split(/[\n\r]+/);
+
+  if (lyricData.length === 0) {
+    lyricData = lines.map((line, idx) => ({
+      id: Date.now() + idx,
+      text: line,
+      time: null
+    }));
+  } else {
+    lines.forEach((line, idx) => {
+      if (lyricData[idx]) lyricData[idx].text = line;
+      else lyricData.push({ id: Date.now() + idx, text: line, time: null });
+    });
+
+    lyricData = lyricData.slice(0, lines.length);
   }
 
-  /* ⭐ 載入歡歌 JSON（含 Base64 → Big5 → 中文） */
-  function loadHuanGeFile() {
-    const file = document.getElementById("huangeFile").files[0];
-    if (!file) return;
+  renderLines();
+}
 
-    const reader = new FileReader();
+/* ⭐ 重新載入歌詞 */
+function reloadLyrics() {
+  const newLines = textarea.value.trim().split(/[\n\r]+/);
+  const newData = [];
 
-    reader.onload = function(e) {
-      let text = e.target.result;
-
-      if (text.charCodeAt(0) === 0xFEFF) {
-        text = text.slice(1);
-      }
-
-      let json;
-      try {
-        json = JSON.parse(text);
-      } catch (err) {
-        alert("檔案不是 JSON 格式，無法載入");
-        return;
-      }
-
-      if (!json.lyric) {
-        alert("檔案缺少 lyric 欄位");
-        return;
-      }
-
-      let decoded = atob(json.lyric);
-      decoded = decodeURIComponent(escape(decoded));
-
-      const lines = decoded.split(/[\n\r]+/);
-
-      lyricData = lines.map((line, idx) => ({
-        id: Date.now() + idx,
-        text: line,
+  for (let i = 0; i < newLines.length; i++) {
+    if (lyricData[i]) {
+      newData.push({
+        id: lyricData[i].id,
+        text: newLines[i],
+        time: lyricData[i].time
+      });
+    } else {
+      newData.push({
+        id: Date.now() + i,
+        text: newLines[i],
         time: null
-      }));
+      });
+    }
+  }
 
-      textarea.value = lines.join("\n");
-      renderLines();
+  lyricData = newData;
+  renderLines();
+}
 
-      alert("歡歌合唱格式歌詞已載入（亂碼已修正）！");
+/* ⭐ 渲染對拍區 */
+function renderLines() {
+  linesOutput.innerHTML = "";
+
+  lyricData.forEach((item, idx) => {
+    const container = document.createElement("div");
+    container.className = "line-item";
+    container.style.marginBottom = "8px";
+
+    const btn = document.createElement("button");
+    btn.textContent = item.time ? `✅ ${formatTime(item.time)}` : "🎯 記錄";
+    btn.onclick = () => {
+      const t = audio.currentTime;
+      item.time = t;
+      timeInput.value = formatTime(t);
+      btn.textContent = `✅ ${formatTime(t)}`;
     };
 
-    reader.readAsBinaryString(file);
-  }
-
-  /* ⭐ 匯出歡歌格式（原本功能） */
-  function exportTXT() {
-    let output = "\n";
-
-    lyricData.forEach((item, i) => {
+    const minus = document.createElement("button");
+    minus.textContent = "−";
+    minus.onclick = () => {
       if (item.time !== null) {
-        const start = Math.round(item.time * 1000);
-        const end = lyricData[i + 1]
-          ? Math.round((lyricData[i + 1].time - item.time) * 1000)
-          : 3000;
-
-        output += `[${start},${end}]<0,${end},0>${item.text}\n`;
+        item.time = Math.max(0, item.time - 0.1);
+        timeInput.value = formatTime(item.time);
       }
+    };
+
+    const plus = document.createElement("button");
+    plus.textContent = "+";
+    plus.onclick = () => {
+      if (item.time !== null) {
+        item.time += 0.1;
+        timeInput.value = formatTime(item.time);
+      }
+    };
+
+    const timeInput = document.createElement("input");
+    timeInput.type = "text";
+    timeInput.placeholder = "00:00.00";
+    timeInput.size = 7;
+    timeInput.value = item.time ? formatTime(item.time) : "";
+    timeInput.addEventListener("change", () => {
+      const parts = timeInput.value.split(/[:.]/).map(Number);
+      const min = parts[0] || 0;
+      const sec = parts[1] || 0;
+      const hs  = parts[2] || 0;
+      item.time = min * 60 + sec + hs / 100;
     });
 
-    const blob = new Blob(["\uFEFF" + output], { type: "text/plain;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "95757";
-    a.click();
-  }
+    const span = document.createElement("span");
+    span.textContent = " " + item.text;
 
-  /* ⭐ 拆句 */
-  function splitLyrics() {
-    const lines = textarea.value.trim().split(/[\n\r]+/);
+    container.append(btn, minus, plus, timeInput, span);
+    linesOutput.appendChild(container);
+  });
+}
 
-    if (lyricData.length === 0) {
-      lyricData = lines.map((line, idx) => ({
-        id: Date.now() + idx,
-        text: line,
-        time: null
-      }));
-    } else {
-      lines.forEach((line, idx) => {
-        if (lyricData[idx]) {
-          lyricData[idx].text = line;
-        } else {
-          lyricData.push({
-            id: Date.now() + idx,
-            text: line,
-            time: null
-          });
-        }
-      });
+/* ⭐ 自動高亮 */
+audio.addEventListener("timeupdate", () => {
+  const current = audio.currentTime;
+  let activeIdx = -1;
 
-      lyricData = lyricData.slice(0, lines.length);
-    }
-
-    renderLines();
-  }
-
-  /* ⭐ 重新載入歌詞（保留時間） */
-  function reloadLyrics() {
-    const newLines = textarea.value.trim().split(/[\n\r]+/);
-    const newData = [];
-
-    for (let i = 0; i < newLines.length; i++) {
-      if (lyricData[i]) {
-        newData.push({
-          id: lyricData[i].id,
-          text: newLines[i],
-          time: lyricData[i].time
-        });
-      } else {
-        newData.push({
-          id: Date.now() + i,
-          text: newLines[i],
-          time: null
-        });
-      }
-    }
-
-    lyricData = newData;
-    renderLines();
-  }
-
-  /* ⭐ 渲染對拍區 */
-  function renderLines() {
-    linesOutput.innerHTML = "";
-
-    lyricData.forEach((item, idx) => {
-      const container = document.createElement("div");
-      container.className = "line-item";
-      container.style.marginBottom = "8px";
-
-      const btn = document.createElement("button");
-      btn.textContent = item.time ? `✅ ${formatTime(item.time)}` : "🎯 記錄";
-      btn.onclick = () => {
-        const t = audio.currentTime;
-        item.time = t;
-        timeInput.value = formatTime(t);
-        btn.textContent = `✅ ${formatTime(t)}`;
-      };
-
-      const minus = document.createElement("button");
-      minus.textContent = "−";
-      minus.onclick = () => {
-        if (item.time !== null) {
-          item.time = Math.max(0, item.time - 0.1);
-          timeInput.value = formatTime(item.time);
-        }
-      };
-
-      const plus = document.createElement("button");
-      plus.textContent = "+";
-      plus.onclick = () => {
-        if (item.time !== null) {
-          item.time += 0.1;
-          timeInput.value = formatTime(item.time);
-        }
-      };
-
-      const timeInput = document.createElement("input");
-      timeInput.type = "text";
-      timeInput.placeholder = "00:00.00";
-      timeInput.size = 7;
-      timeInput.value = item.time ? formatTime(item.time) : "";
-      timeInput.addEventListener("change", () => {
-        const parts = timeInput.value.split(/[:.]/).map(Number);
-        const min = parts[0] || 0;
-        const sec = parts[1] || 0;
-        const hs  = parts[2] || 0;
-        item.time = min * 60 + sec + hs / 100;
-      });
-
-      const span = document.createElement("span");
-      span.textContent = " " + item.text;
-
-      container.append(btn, minus, plus, timeInput, span);
-      linesOutput.appendChild(container);
-    });
-  }
-
-  /* ⭐ 自動高亮 */
-  audio.addEventListener("timeupdate", () => {
-    const current = audio.currentTime;
-    let activeIdx = -1;
-
-    lyricData.forEach((item, idx) => {
-      if (item.time !== null && current >= item.time) {
-        activeIdx = idx;
-      }
-    });
-
-    document.querySelectorAll(".line-item").forEach((line, idx) => {
-      line.classList.toggle("active-line", idx === activeIdx);
-      if (idx === activeIdx) {
-        line.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    });
+  lyricData.forEach((item, idx) => {
+    if (item.time !== null && current >= item.time) activeIdx = idx;
   });
 
-  /* ⭐ 插入模版 */
-  function insertTemplate() {
-    const pwd = prompt("請輸入密碼以插入標準模版：");
-
-    if (pwd !== "790614") {
-      alert("密碼錯誤，無法插入模版！");
-      return;
+  document.querySelectorAll(".line-item").forEach((line, idx) => {
+    line.classList.toggle("active-line", idx === activeIdx);
+    if (idx === activeIdx) {
+      line.scrollIntoView({ behavior: "smooth", block: "center" });
     }
+  });
+});
 
-    const template = 
+/* ⭐ 插入模版 */
+function insertTemplate() {
+  const pwd = prompt("請輸入密碼以插入標準模版：");
+
+  if (pwd !== "790614") {
+    alert("密碼錯誤，無法插入模版！");
+    return;
+  }
+
+  const template = 
 `༄༅༘ꕥ 豐豐大俠 ꕥ༘༅༄
 原唱：
 3️⃣
@@ -423,9 +382,9 @@ async function importExportOneKey() {
 
 ༄༅༘ꕥ完ꕥ༘༅༄`;
 
-    textarea.value = template + "\n\n" + textarea.value;
-    alert("模版已成功插入！");
-  }
+  textarea.value = template + "\n\n" + textarea.value;
+  alert("模版已成功插入！");
+}
 </script>
 
 </body>
