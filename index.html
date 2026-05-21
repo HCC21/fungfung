@@ -15,7 +15,6 @@
       line-height: 1.5;
     }
 
-    /* ⭐ 音樂 bar 永久固定在螢幕最上方 */
     audio {
       position: fixed;
       top: 0;
@@ -28,7 +27,6 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.25);
     }
 
-    /* ⭐ 內容往下推，避免被播放器擋住 */
     .app-container {
       margin-top: 90px;
       background: rgba(255, 255, 255, 0.78);
@@ -95,7 +93,6 @@
 </head>
 <body>
 
-<!-- ⭐ 永久固定在最上方的音樂播放器 -->
 <audio id="audio" controls preload="auto"></audio>
 
 <div class="app-container">
@@ -133,7 +130,7 @@ async function importExportOneKey() {
 </script>
 
 <section>
-  <label>合唱格式檔案：</label>
+  <label>匯入合唱格式歌詞檔案：</label>
   <input type="file" id="huangeFile" onchange="loadHuanGeFile()" />
 </section>
 
@@ -184,42 +181,81 @@ function formatTime(t) {
   return `${min}:${String(sec).padStart(2, "0")}.${String(hundredths).padStart(2, "0")}`;
 }
 
-/* ⭐ 載入歡歌 JSON */
 function loadHuanGeFile() {
   const file = document.getElementById("huangeFile").files[0];
-  if (!file) return;
+  if (!file) {
+    alert("沒有選擇檔案");
+    return;
+  }
 
   const reader = new FileReader();
 
   reader.onload = function(e) {
     let text = e.target.result;
-    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
 
-    let json;
-    try { json = JSON.parse(text); }
-    catch { alert("檔案不是 JSON 格式"); return; }
+    // 清除 BOM
+    if (text.charCodeAt(0) === 0xFEFF) {
+      text = text.slice(1);
+    }
 
-    if (!json.lyric) { alert("缺少 lyric 欄位"); return; }
+    let decoded = "";
+    let isJSON = false;
 
-    let decoded = atob(json.lyric);
-    decoded = decodeURIComponent(escape(decoded));
+    // 嘗試解析 JSON
+    try {
+      const json = JSON.parse(text);
+      if (json.lyric) {
+        isJSON = true;
+        decoded = decodeURIComponent(escape(atob(json.lyric)));
+      }
+    } catch (err) {
+      isJSON = false;
+    }
 
-    const lines = decoded.split(/[\n\r]+/);
+    // TXT 模式
+    if (!isJSON) {
+      decoded = text;
+    }
 
+  decoded = decoded.replace(/\[\d+,\d+\]<0,\d+,0>/g, "");
+decoded = decoded.replace(/\[\d+,\d+\]/g, "");
+decoded = decoded.replace(/<0,\d+,0>/g, "");
+
+
+    // 清除不可見字元
+    decoded = decoded.replace(/[\u0000-\u001F\u007F]/g, "");
+
+    // 清除空白行
+    const lines = decoded
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+
+    if (lines.length === 0) {
+      alert("檔案內容為空，或格式不正確");
+      return;
+    }
+
+    // 建立 lyricData
     lyricData = lines.map((line, idx) => ({
       id: Date.now() + idx,
       text: line,
       time: null
     }));
 
+    // 顯示到 textarea
     textarea.value = lines.join("\n");
+
+    // 渲染對拍區
     renderLines();
 
-    alert("歡歌合唱格式歌詞已載入！");
+    alert(isJSON ? "JSON 歌詞已成功匯入！" : "TXT 歌詞已成功匯入！");
   };
 
-  reader.readAsBinaryString(file);
+  reader.readAsText(file, "utf-8");
 }
+
+
 
 /* ⭐ 匯出歡歌格式 */
 function exportTXT() {
