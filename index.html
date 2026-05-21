@@ -51,7 +51,6 @@
       resize: vertical;
     }
 
-    /* ⭐ 立體浮雕按鈕 */
     button {
       padding: 10px 18px;
       font-size: 16px;
@@ -94,13 +93,109 @@
 <div class="app-container">
 
   <h2>豐豐大俠製作歌詞工具</h2>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>一鍵把歡歌合唱歌詞檔案轉換正常歡歌格式歌詞</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Microsoft JhengHei', sans-serif;
+      padding: 20px;
+      background: #faf7f2;
+    }
+    .box {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      max-width: 600px;
+      margin: auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    button {
+      padding: 12px 20px;
+      font-size: 18px;
+      background: #ff9f7f;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #c96f55;
+    }
+    button:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #c96f55;
+    }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h2>一鍵把歡歌合唱歌詞檔案轉換正常歡歌格式歌詞</h2>
+<button onclick="importExportOneKey()">📂 選擇歡歌合唱歌詞檔案</button>
+</div>
+
+<script>
+
+async function importExportOneKey() {
+  try {
+    // 1️⃣ 選擇任何副檔名的檔案（最保險寫法：不限制 types）
+    const [handle] = await window.showOpenFilePicker({
+      multiple: false
+    });
+
+    // 2️⃣ 讀取檔案內容
+    const file = await handle.getFile();
+    let text = await file.text();
+
+    // 3️⃣ 嘗試解析 JSON
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      alert("❌ 檔案不是 JSON 格式，無法讀取 lyric！");
+      return;
+    }
+
+    if (!json.lyric) {
+      alert("❌ 檔案缺少 lyric 欄位！");
+      return;
+    }
+
+    // 4️⃣ Base64 → Big5 → 正常中文（關鍵）
+    let decoded = atob(json.lyric);
+    decoded = decodeURIComponent(escape(decoded));
+
+    // 5️⃣ 覆寫同一個檔案（輸出正常中文歌詞）
+    const writable = await handle.createWritable();
+    await writable.write(decoded);
+    await writable.close();
+
+    alert("✅ 已成功匯出正常中文歌詞！（已覆寫原檔）");
+
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+</script>
+
+</body>
+</html>
+   
 
   <section>
+    <label>合唱格式檔案：</label>
+    <input type="file" id="huangeFile" accept=" " onchange="loadHuanGeFile()" />
+   </section>
+  <section>
+    <label>音樂格式檔案：</label>
     <input type="file" id="audioFile" accept="audio/*" />
     <audio id="audio" controls preload="auto"></audio>
   </section>
 
-  <!-- ⭐ 插入模版按鈕移到歌詞框上方 -->
   <section>
     <button onclick="insertTemplate()">✨ 插入標準模版</button>
   </section>
@@ -109,20 +204,17 @@
     <textarea id="lyricInput" placeholder="每行一句歌詞，可插入 emoji 🎶💕🔥"></textarea>
   </section>
 
-  <!-- ⭐ 拆句與重新載入保持在一起 -->
   <section>
     <button onclick="splitLyrics()">📄 拆句並設置對拍按鈕</button>
     <button onclick="reloadLyrics()">🔄 重新載入歌詞（保留時間）</button>
   </section>
 
-  <!-- ⭐ 對拍區 -->
   <section>
      <div id="linesOutput"></div>
   </section>
 
-  <!-- ⭐ 匯出永遠放在最尾 -->
   <section>
-    <button onclick="exportTXT()">🎤 匯出歡歌格式</button>
+       <button onclick="exportTXT()">🎤 匯出歡歌格式</button>
   </section>
 
 </div>
@@ -134,6 +226,7 @@
 
   let lyricData = [];
 
+  /* ⭐ 載入音樂 */
   document.getElementById("audioFile").addEventListener("change", e => {
     const file = e.target.files[0];
     if (!file) return;
@@ -149,7 +242,54 @@
     return `${min}:${String(sec).padStart(2, "0")}.${String(hundredths).padStart(2, "0")}`;
   }
 
-  /* ⭐ 匯出歡歌格式永遠在最尾 */
+  /* ⭐ 載入歡歌 JSON（含 Base64 → Big5 → 中文） */
+  function loadHuanGeFile() {
+    const file = document.getElementById("huangeFile").files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      let text = e.target.result;
+
+      if (text.charCodeAt(0) === 0xFEFF) {
+        text = text.slice(1);
+      }
+
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (err) {
+        alert("檔案不是 JSON 格式，無法載入");
+        return;
+      }
+
+      if (!json.lyric) {
+        alert("檔案缺少 lyric 欄位");
+        return;
+      }
+
+      let decoded = atob(json.lyric);
+      decoded = decodeURIComponent(escape(decoded));
+
+      const lines = decoded.split(/[\n\r]+/);
+
+      lyricData = lines.map((line, idx) => ({
+        id: Date.now() + idx,
+        text: line,
+        time: null
+      }));
+
+      textarea.value = lines.join("\n");
+      renderLines();
+
+      alert("歡歌合唱格式歌詞已載入（亂碼已修正）！");
+    };
+
+    reader.readAsBinaryString(file);
+  }
+
+  /* ⭐ 匯出歡歌格式（原本功能） */
   function exportTXT() {
     let output = "\n";
 
@@ -267,8 +407,11 @@
       timeInput.size = 7;
       timeInput.value = item.time ? formatTime(item.time) : "";
       timeInput.addEventListener("change", () => {
-        const [min, sec, hs] = timeInput.value.split(/[:.]/).map(Number);
-        item.time = min * 60 + sec + (hs || 0) / 100;
+        const parts = timeInput.value.split(/[:.]/).map(Number);
+        const min = parts[0] || 0;
+        const sec = parts[1] || 0;
+        const hs  = parts[2] || 0;
+        item.time = min * 60 + sec + hs / 100;
       });
 
       const span = document.createElement("span");
