@@ -14,11 +14,11 @@
       line-height: 1.5;
     }
 
-    /* 毛玻璃容器 */
     .app-container {
       background: rgba(255, 255, 255, 0.78);
       backdrop-filter: blur(8px);
       padding: 20px;
+      padding-bottom: 150px; /* 防止按鈕被播放器遮住 */
       border-radius: 12px;
       max-width: 900px;
       margin: auto;
@@ -51,19 +51,23 @@
       resize: vertical;
     }
 
+    /* ⭐ 立體浮雕按鈕 */
     button {
-      padding: 10px 15px;
+      padding: 10px 18px;
       font-size: 16px;
-      margin: 8px 5px 8px 0;
-      background: #e07a5f;
+      margin: 8px 5px;
+      background: linear-gradient(180deg, #ffb899, #e07a5f);
       color: white;
       border: none;
-      border-radius: 5px;
+      border-radius: 8px;
       cursor: pointer;
+      box-shadow: 0 4px 0 #b85a46;
+      transition: 0.15s;
     }
 
-    button:hover {
-      background-color: #d3614f;
+    button:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #b85a46;
     }
 
     audio {
@@ -89,7 +93,7 @@
 
 <div class="app-container">
 
-  <h2>豐豐大俠製作歌詞工具</h2>
+  <h2>༄༅༘ꕥ 豐豐大俠 ꕥ༘༅༄製作歌詞工具</h2>
 
   <section>
     <input type="file" id="audioFile" accept="audio/*" />
@@ -100,26 +104,27 @@
     <textarea id="lyricInput" placeholder="每行一句歌詞，可插入 emoji 🎶💕🔥"></textarea>
   </section>
 
+  <!-- ⭐ 所有按鈕平排 -->
   <section>
     <button onclick="insertTemplate()">✨ 插入標準模版</button>
-    <button onclick="exportLRC()">💾 匯出 .lrc</button>
     <button onclick="exportTXT()">🎤 匯出歡歌格式</button>
+    <button onclick="splitLyrics()">📄 拆句並設置對拍按鈕</button>
+    <button onclick="reloadLyrics()">🔄 重新載入歌詞（保留時間）</button>
   </section>
 
   <section>
      <div id="linesOutput"></div>
   </section>
 
-  <button onclick="splitLyricsWithRecordButtons()">📄 拆句並設置對拍按鈕</button>
-
-</div> <!-- app-container END -->
+</div>
 
 <script>
   const audio = document.getElementById("audio");
   const textarea = document.getElementById("lyricInput");
   const linesOutput = document.getElementById("linesOutput");
 
-  let lyrics = [], times = [];
+  /* ⭐ 行 ID + 時間資料 */
+  let lyricData = [];
 
   document.getElementById("audioFile").addEventListener("change", e => {
     const file = e.target.files[0];
@@ -136,40 +141,20 @@
     return `${min}:${String(sec).padStart(2, "0")}.${String(hundredths).padStart(2, "0")}`;
   }
 
-  function exportLRC() {
-    const ar = "", ti = "", by = "", al = "";
-    lyrics = textarea.value.trim().split("\n");
-
-    let output = "";
-    output += "[id:$00000000]\n";
-    output += `[ar:${ar}]\n[ti:${ti}]\n[by:${by}]\n[hash:]\n[al:${al}]\n`;
-    output += "[sign:]\n[qq:]\n";
-    output += `[total:${Math.round(audio.duration * 1000)}]\n`;
-    output += "[offset:0]\n";
-    output += "[language:eyJjb250ZW50IjpbXSwidmVyc2lvbiI6MX0=]\n[manualoffset:0]\n\n";
-
-    for (let i = 0; i < lyrics.length && i < times.length; i++) {
-      output += `[${formatTime(times[i])}]${lyrics[i]}\n`;
-    }
-
-    const blob = new Blob(["\uFEFF" + output], { type: "text/plain;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "歌詞.lrc";
-    a.click();
-  }
-
+  /* ⭐ 匯出歡歌格式 */
   function exportTXT() {
-    lyrics = textarea.value.trim().split("\n");
-    let output = "";
+    let output = "\n";
 
-    output += "\n";
+    lyricData.forEach((item, i) => {
+      if (item.time !== null) {
+        const start = Math.round(item.time * 1000);
+        const end = lyricData[i + 1]
+          ? Math.round((lyricData[i + 1].time - item.time) * 1000)
+          : 3000;
 
-    for (let i = 0; i < lyrics.length && i < times.length; i++) {
-      const start = Math.round(times[i] * 1000);
-      const end = times[i + 1] ? Math.round((times[i + 1] - times[i]) * 1000) : 3000;
-      output += `[${start},${end}]<0,${end},0>${lyrics[i]}\n`;
-    }
+        output += `[${start},${end}]<0,${end},0>${item.text}\n`;
+      }
+    });
 
     const blob = new Blob(["\uFEFF" + output], { type: "text/plain;charset=utf-8" });
     const a = document.createElement("a");
@@ -178,21 +163,74 @@
     a.click();
   }
 
-  function splitLyricsWithRecordButtons() {
-    lyrics = textarea.value.trim().split(/[\n\r]+/);
-    linesOutput.innerHTML = "";
-    times = Array(lyrics.length).fill(null);
+  /* ⭐ 拆句（第一次建立 ID） */
+  function splitLyrics() {
+    const lines = textarea.value.trim().split(/[\n\r]+/);
 
-    lyrics.forEach((line, idx) => {
+    if (lyricData.length === 0) {
+      lyricData = lines.map((line, idx) => ({
+        id: Date.now() + idx,
+        text: line,
+        time: null
+      }));
+    } else {
+      lines.forEach((line, idx) => {
+        if (lyricData[idx]) {
+          lyricData[idx].text = line;
+        } else {
+          lyricData.push({
+            id: Date.now() + idx,
+            text: line,
+            time: null
+          });
+        }
+      });
+
+      lyricData = lyricData.slice(0, lines.length);
+    }
+
+    renderLines();
+  }
+
+  /* ⭐ 重新載入歌詞（保留時間） */
+  function reloadLyrics() {
+    const newLines = textarea.value.trim().split(/[\n\r]+/);
+    const newData = [];
+
+    for (let i = 0; i < newLines.length; i++) {
+      if (lyricData[i]) {
+        newData.push({
+          id: lyricData[i].id,
+          text: newLines[i],
+          time: lyricData[i].time
+        });
+      } else {
+        newData.push({
+          id: Date.now() + i,
+          text: newLines[i],
+          time: null
+        });
+      }
+    }
+
+    lyricData = newData;
+    renderLines();
+  }
+
+  /* ⭐ 渲染對拍區 */
+  function renderLines() {
+    linesOutput.innerHTML = "";
+
+    lyricData.forEach((item, idx) => {
       const container = document.createElement("div");
       container.className = "line-item";
       container.style.marginBottom = "8px";
 
       const btn = document.createElement("button");
-      btn.textContent = "🎯 記錄";
+      btn.textContent = item.time ? `✅ ${formatTime(item.time)}` : "🎯 記錄";
       btn.onclick = () => {
         const t = audio.currentTime;
-        times[idx] = t;
+        item.time = t;
         timeInput.value = formatTime(t);
         btn.textContent = `✅ ${formatTime(t)}`;
       };
@@ -200,18 +238,18 @@
       const minus = document.createElement("button");
       minus.textContent = "−";
       minus.onclick = () => {
-        if (times[idx] !== null) {
-          times[idx] = Math.max(0, times[idx] - 0.1);
-          timeInput.value = formatTime(times[idx]);
+        if (item.time !== null) {
+          item.time = Math.max(0, item.time - 0.1);
+          timeInput.value = formatTime(item.time);
         }
       };
 
       const plus = document.createElement("button");
       plus.textContent = "+";
       plus.onclick = () => {
-        if (times[idx] !== null) {
-          times[idx] += 0.1;
-          timeInput.value = formatTime(times[idx]);
+        if (item.time !== null) {
+          item.time += 0.1;
+          timeInput.value = formatTime(item.time);
         }
       };
 
@@ -219,28 +257,30 @@
       timeInput.type = "text";
       timeInput.placeholder = "00:00.00";
       timeInput.size = 7;
+      timeInput.value = item.time ? formatTime(item.time) : "";
       timeInput.addEventListener("change", () => {
         const [min, sec, hs] = timeInput.value.split(/[:.]/).map(Number);
-        times[idx] = min * 60 + sec + (hs || 0) / 100;
+        item.time = min * 60 + sec + (hs || 0) / 100;
       });
 
       const span = document.createElement("span");
-      span.textContent = " " + line;
+      span.textContent = " " + item.text;
 
       container.append(btn, minus, plus, timeInput, span);
       linesOutput.appendChild(container);
     });
   }
 
+  /* ⭐ 自動高亮 */
   audio.addEventListener("timeupdate", () => {
     const current = audio.currentTime;
     let activeIdx = -1;
 
-    for (let i = 0; i < times.length; i++) {
-      if (times[i] !== null && current >= times[i]) {
-        activeIdx = i;
+    lyricData.forEach((item, idx) => {
+      if (item.time !== null && current >= item.time) {
+        activeIdx = idx;
       }
-    }
+    });
 
     document.querySelectorAll(".line-item").forEach((line, idx) => {
       line.classList.toggle("active-line", idx === activeIdx);
@@ -250,6 +290,7 @@
     });
   });
 
+  /* ⭐ 插入模版 */
   function insertTemplate() {
     const pwd = prompt("請輸入密碼以插入標準模版：");
 
