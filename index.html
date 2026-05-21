@@ -18,7 +18,7 @@
       background: rgba(255, 255, 255, 0.78);
       backdrop-filter: blur(8px);
       padding: 20px;
-      padding-bottom: 150px; /* 防止按鈕被播放器遮住 */
+      padding-bottom: 150px;
       border-radius: 12px;
       max-width: 900px;
       margin: auto;
@@ -93,27 +93,36 @@
 
 <div class="app-container">
 
-  <h2>༄༅༘ꕥ 豐豐大俠 ꕥ༘༅༄製作歌詞工具</h2>
+  <h2>豐豐大俠製作歌詞工具</h2>
 
   <section>
     <input type="file" id="audioFile" accept="audio/*" />
     <audio id="audio" controls preload="auto"></audio>
   </section>
 
+  <!-- ⭐ 插入模版按鈕移到歌詞框上方 -->
+  <section>
+    <button onclick="insertTemplate()">✨ 插入標準模版</button>
+  </section>
+
   <section class="lyrics-container">
     <textarea id="lyricInput" placeholder="每行一句歌詞，可插入 emoji 🎶💕🔥"></textarea>
   </section>
 
-  <!-- ⭐ 所有按鈕平排 -->
+  <!-- ⭐ 拆句與重新載入保持在一起 -->
   <section>
-    <button onclick="insertTemplate()">✨ 插入標準模版</button>
-    <button onclick="exportTXT()">🎤 匯出歡歌格式</button>
     <button onclick="splitLyrics()">📄 拆句並設置對拍按鈕</button>
     <button onclick="reloadLyrics()">🔄 重新載入歌詞（保留時間）</button>
   </section>
 
+  <!-- ⭐ 對拍區 -->
   <section>
      <div id="linesOutput"></div>
+  </section>
+
+  <!-- ⭐ 匯出永遠放在最尾 -->
+  <section>
+    <button onclick="exportTXT()">🎤 匯出歡歌格式</button>
   </section>
 
 </div>
@@ -123,7 +132,6 @@
   const textarea = document.getElementById("lyricInput");
   const linesOutput = document.getElementById("linesOutput");
 
-  /* ⭐ 行 ID + 時間資料 */
   let lyricData = [];
 
   document.getElementById("audioFile").addEventListener("change", e => {
@@ -141,7 +149,7 @@
     return `${min}:${String(sec).padStart(2, "0")}.${String(hundredths).padStart(2, "0")}`;
   }
 
-  /* ⭐ 匯出歡歌格式 */
+  /* ⭐ 匯出歡歌格式永遠在最尾 */
   function exportTXT() {
     let output = "\n";
 
@@ -163,7 +171,7 @@
     a.click();
   }
 
-  /* ⭐ 拆句（第一次建立 ID） */
+  /* ⭐ 拆句 */
   function splitLyrics() {
     const lines = textarea.value.trim().split(/[\n\r]+/);
 
